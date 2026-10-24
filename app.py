@@ -1,42 +1,28 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import mysql.connector
-from datetime import datetime
+import plotly.express as px
+import requests
+from datetime import datetime, date, timedelta
+import numpy as np
 
-# ==========================================
-# 1. SAYFA AYARLARI VE TEMA
-# ==========================================
-st.set_page_config(page_title="Cascade AI | DSS", page_icon="🍃", layout="wide")
+# --- 1. ARAYÜZ YAPILANDIRMASI VE SABİTLER ---
+st.set_page_config(page_title="Cascade AI | Enterprise DSS", layout="wide", page_icon="🌱")
 
-# CSS - Dark/Light Modlarla %100 Uyumlu Tasarım
-st.markdown("""
-    <style>
-    div[data-testid="metric-container"] {
-        border-left: 5px solid #10B981; 
-        padding-left: 15px;
-    }
-    .cascade-box {
-        background-color: rgba(46, 125, 50, 0.15);
-        border-left: 5px solid #2E7D32;
-        padding: 20px;
-        border-radius: 5px;
-        font-size: 16px;
-        margin-bottom: 20px;
-    }
-    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        font-size: 18px;
-        font-weight: bold;
-    }
-    </style>
-""", unsafe_allow_html=True)
+PORSIYON_MALIYET_TL = 35 # Öğrenci satış fiyatı bazlı konservatif birim tasarruf (TL)
 
-# ==========================================
-# 2. VERİTABANI BAĞLANTISI (AIVEN CLOUD)
-# ==========================================
+menu_kategorileri = {
+    "Tavuk Dünyası": "Tavuk", "Fırın Baget": "Tavuk", "Tavuk Sote": "Tavuk", "Fırın Tavuk": "Tavuk",
+    "Çiftlik Köfte": "Köfte", "İzmir Köfte": "Köfte", "İnegöl Köfte": "Köfte", "Kadınbudu Köfte": "Köfte",
+    "Orman Kebabı": "Sulu Et", "Etli Mevsim Türlüsü": "Sulu Et", "Karnıyarık": "Sulu Et", "Tas Kebabı": "Sulu Et",
+    "Etli Kuru Fasulye": "Bakliyat", "Etli Nohut": "Bakliyat", "Yeşil Mercimek": "Bakliyat", "Zeytinyağlı Barbunya": "Bakliyat",
+    "Pırasa Yemeği": "Sebze", "Ispanak": "Sebze", "Zeytinyağlı Kapuska": "Sebze", "Kereviz Yemeği": "Sebze", "Zeytinyağlı Brokoli": "Sebze"
+}
+
 @st.cache_data(ttl=600)
 def veri_getir():
     try:
+        # st.secrets ile güvenli bulut bağlantısı eklendi
         db = mysql.connector.connect(
             host=st.secrets["DB_HOST"],
             port=st.secrets["DB_PORT"],
@@ -46,133 +32,180 @@ def veri_getir():
         )
         return pd.read_sql("SELECT * FROM esogu_gercek_veriler", con=db)
     except Exception as e:
-        tarihler = pd.date_range(start="2026-10-01", periods=14)
-        return pd.DataFrame({
-            'Tarih': tarihler,
-            'Beklenen_Talep': [4500, 4600, 4200, 4800, 5000, 2000, 1500, 4700, 4800, 4900, 5100, 5000, 1800, 1600],
-            'Uretim_Onerisi': [4500, 4600, 4100, 4800, 5000, 2000, 1500, 4650, 4800, 4900, 5050, 5000, 1800, 1600],
-            'Kurtarilan_Gida_Kg': [0, 0, 100, 0, 0, 0, 0, 50, 0, 0, 50, 0, 0, 0],
-            'Hava_Durumu': ['Güneşli', 'Bulutlu', 'Yağmurlu', 'Güneşli', 'Güneşli', 'Güneşli', 'Güneşli', 'Yağmurlu', 'Bulutlu', 'Güneşli', 'Güneşli', 'Güneşli', 'Güneşli', 'Bulutlu']
-        })
+        st.error(f"Veritabanı bağlantı hatası: {e}. Lütfen 'Advanced settings -> Secrets' ayarlarını kontrol edin.")
+        return pd.DataFrame()
+
+def wmo_cevir(w):
+    if w in [0, 1]: return "Güneşli"
+    elif w in [2, 3]: return "Parçalı Bulutlu"
+    elif w in [45, 48]: return "Kapalı"
+    elif w in [51, 53, 55, 61, 63, 65, 80, 81, 82]: return "Yağmurlu"
+    elif w in [71, 73, 75, 77, 85, 86]: return "Kar Yağışlı"
+    return "Bulutlu"
+
+def beklenen_talep_orani_hesapla(olay, takvim, kategori):
+    """Uzman Sistem (Expert System) Temel Talep Katsayı Motoru"""
+    oran = 1.0
+    if olay == "Kar Yağışlı": oran *= 0.72
+    elif olay == "Yağmurlu": oran *= 0.85
+    elif olay == "Kapalı": oran *= 0.92
+    elif olay in ["Bulutlu", "Parçalı Bulutlu"]: oran *= 0.96
+    
+    if takvim == "Ramazan Ayı": oran *= 0.82
+    elif takvim in ["Ara Sınav (Vize) Haftası", "Final Haftası"]: oran *= 0.78
+    
+    if kategori in ["Tavuk", "Köfte"]: oran *= 1.06
+    elif kategori == "Sulu Et": oran *= 0.96
+    elif kategori == "Bakliyat": oran *= 0.92
+    elif kategori == "Sebze": oran *= 0.76
+    
+    return min(0.98, oran)
+
+# --- 2. CANLI 7 GÜNLÜK HAVA TAHMİNİ ---
+@st.cache_data(ttl=1800) 
+def canli_7gun_tahmin_cek():
+    try:
+        url = "https://api.open-meteo.com/v1/forecast?latitude=39.77&longitude=30.52&daily=temperature_2m_max,weathercode&timezone=auto&forecast_days=7"
+        res = requests.get(url, timeout=5).json()
+        tahmin_sozluk = {}
+        for i, t_str in enumerate(res['daily']['time']):
+            t_dt = pd.to_datetime(t_str).date()
+            if res['daily']['temperature_2m_max'][i] is not None:
+                tahmin_sozluk[t_dt] = (int(res['daily']['temperature_2m_max'][i]), wmo_cevir(res['daily']['weathercode'][i]))
+        return tahmin_sozluk
+    except:
+        return {}
 
 df = veri_getir()
+canli_tahminler = canli_7gun_tahmin_cek()
 
-# ==========================================
-# 3. YAN MENÜ (SIDEBAR) - ORİJİNAL KONTROLLER
-# ==========================================
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/8064/8064808.png", width=80) 
-st.sidebar.title("Cascade AI Parametreleri")
-st.sidebar.markdown("---")
-
-secilen_tarih = st.sidebar.date_input("📅 Tarih Seçimi", datetime.today())
-hava_durumu = st.sidebar.selectbox("🌤️ Hava Durumu (Open-Meteo)", ["Güneşli", "Bulutlu", "Yağmurlu", "Karlı"])
-
-st.sidebar.markdown("**📚 Akademik Takvim**")
-is_ramazan = st.sidebar.checkbox("🌙 Ramazan Ayı")
-is_sinav = st.sidebar.checkbox("📝 Sınav Haftası")
-is_haftasonu = st.sidebar.checkbox("🏖️ Hafta Sonu / Tatil")
-
-st.sidebar.markdown("---")
-st.sidebar.info("Modül Entegrasyonları:\n\n✅ SKS Web Scraping\n\n⏳ Logo Tiger ERP (Faz 2)")
-
-# --- DİNAMİK HESAPLAMA MOTORU (Jüri Demosu İçin) ---
-baz_talep = 5000
-if is_haftasonu:
-    baz_talep = 1500
-if is_ramazan:
-    baz_talep = int(baz_talep * 0.4)
-if is_sinav and not is_haftasonu:
-    baz_talep = int(baz_talep * 1.1)
-if hava_durumu == "Yağmurlu":
-    baz_talep = int(baz_talep * 0.88)
-elif hava_durumu == "Karlı":
-    baz_talep = int(baz_talep * 0.75)
-
-uretim_hedefi = int(baz_talep * 1.035) # %3.5 Güvenlik Stoku
-fark = 5000 - baz_talep
-kurtarilan_kg = int(fark * 0.25) if fark > 0 else 0
-
-# ==========================================
-# 4. ANA EKRAN VE SEKMELER
-# ==========================================
-st.title("🍃 Cascade AI: Kurumsal Karar Destek Sistemi")
-st.markdown("Akıllı Üretim Planlama ve Gıda İleri Dönüşüm (Upcycle) Platformu")
-
-tab1, tab2, tab3 = st.tabs(["👩‍🍳 Mutfak Operasyon (Şef)", "📊 SKS Yönetim (Finans & Karbon)", "🛒 Satın Alma (Erken Uyarı)"])
-
-with tab1:
-    st.header("Günlük Üretim ve Cascade Yönergeleri")
+# --- 3. VERİ MÜHENDİSLİĞİ & KARAR MOTORU ---
+if not df.empty:
+    df['tarih_dt'] = pd.to_datetime(df['tarih']).dt.date
+    df = df.sort_values('tarih_dt').reset_index(drop=True)
+    df['kategori'] = df['menu_tipi'].map(menu_kategorileri)
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label="Anlık Talep Beklentisi", value=f"{baz_talep:,} Porsiyon", delta=f"{hava_durumu} / Seçili Takvim")
-    col2.metric(label="Optimum Üretim Hedefi", value=f"{uretim_hedefi:,} Porsiyon", delta="%3.5 Güvenlik Stoku Dahil", delta_color="normal")
-    col3.metric(label="Önlenen İsraf (Çiğ)", value=f"{kurtarilan_kg} Kg", delta="Döngüye Alındı", delta_color="normal")
-
-    st.markdown("### 🔄 Cascade (İleri Dönüşüm) Yönergeleri")
+    gercek_bugun = date.today()
     
-    # Dinamik Yönerge Metni
-    yönerge_metni = f"1. <b>Üretim Ayarlaması:</b> Bugün hedeflenen üretim {uretim_hedefi:,} porsiyondur.<br>"
-    if is_ramazan:
-        yönerge_metni += "2. <b>Ramazan Ayı Protokolü:</b> Talep %60 düştü. Üretime girmeyen etleri -18°C'de şoklayın. İftar menüsü hazırlıklarına ağırlık verin.<br>"
-    elif is_haftasonu:
-        yönerge_metni += "2. <b>Hafta Sonu Protokolü:</b> Sadece nöbetçi yurt öğrencileri için asgari üretim yapın. Taze sebze alımlarını pazartesiye erteleyin.<br>"
-    elif hava_durumu in ["Yağmurlu", "Karlı"]:
-        yönerge_metni += f"2. <b>Hava Muhalefeti:</b> {hava_durumu} sebebiyle kampüs nüfusu düşüyor. {kurtarilan_kg} kg çiğ gıdayı +4°C'de yarına saklayın.<br>"
-    else:
-        yönerge_metni += "2. <b>Standart Operasyon:</b> Talep normal seviyede. Tezgahta kalan pişmiş yemek olursa akşam 19:00'da indirimli satışa (Too Good To Go) açın.<br>"
+    # Canlı 7 günlük API tahminlerini ana DataFrame'e işle
+    for idx, row in df.iterrows():
+        t_dt = row['tarih_dt']
+        if t_dt in canli_tahminler:
+            yeni_sicaklik, yeni_olay = canli_tahminler[t_dt]
+            df.at[idx, 'hava_durumu_c'] = yeni_sicaklik
+            df.at[idx, 'hava_olayi'] = yeni_olay
 
-    st.markdown(f"""
-    <div class="cascade-box">
-        <b>🚨 HACCP Aksiyon Reçetesi (Tarih: {secilen_tarih}):</b><br><br>
-        {yönerge_metni}
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.subheader("Haftalık Operasyon Projeksiyonu")
-    st.dataframe(df[['Tarih', 'Beklenen_Talep', 'Uretim_Onerisi', 'Hava_Durumu']], use_container_width=True)
-
-with tab2:
-    st.header("Sürdürülebilirlik ve Finansal Performans")
+    # Sonraki operasyon günü, menüsü ve kategorisi (Çapraz uyum kontrolü için)
+    df['sonraki_tarih'] = df['tarih_dt'].shift(-1).fillna(date(2027, 9, 15))
+    df['gun_farki'] = (pd.to_datetime(df['sonraki_tarih']) - pd.to_datetime(df['tarih_dt'])).dt.days.fillna(75).astype(int)
+    df['yarinki_menu'] = df['menu_tipi'].shift(-1).fillna("Yeni Akademik Yıl Açılış Menüsü")
+    df['yarinki_kategori'] = df['kategori'].shift(-1).fillna("Standart")
     
-    c1, c2, c3 = st.columns(3)
-    c1.metric(label="💰 Haftalık Net Tasarruf", value="₺18,500", delta="+₺3.200 (Geçen Haftaya Göre)")
-    c2.metric(label="💧 Korunan Su Kaynağı", value="4,200 Litre", delta="Tarımsal Su Ayak İzi")
-    c3.metric(label="🌍 Engellenen Karbon (CO2e)", value="850 Kg", delta="Metan Gazı Önleme")
+    gun_isimleri = {0: "Pazartesi", 1: "Salı", 2: "Çarşamba", 3: "Perşembe", 4: "Cuma", 5: "Cumartesi", 6: "Pazar"}
+    df['sonraki_is_gunu_no'] = pd.to_datetime(df['sonraki_tarih']).dt.weekday.fillna(0).astype(int)
+    df['sonraki_is_gunu_adi'] = df['sonraki_is_gunu_no'].map(gun_isimleri)
 
-    st.markdown("---")
-    col_chart1, col_chart2 = st.columns(2)
+    aktif_tarih = gercek_bugun
+    while aktif_tarih not in df['tarih_dt'].values and aktif_tarih <= df['tarih_dt'].max():
+        aktif_tarih += timedelta(days=1)
 
-    with col_chart1:
-        fig1 = px.line(df, x='Tarih', y=['Beklenen_Talep', 'Uretim_Onerisi'], 
-                       labels={'value': 'Porsiyon', 'variable': 'Metrik'},
-                       color_discrete_sequence=["#3b82f6", "#10b981"],
-                       title="Talep ve Optimum Üretim Karşılaştırması")
-        fig1.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig1, use_container_width=True)
-
-    with col_chart2:
-        fig2 = px.bar(df, x='Tarih', y='Kurtarilan_Gida_Kg', 
-                      title="Günlük Kurtarılan Gıda Miktarı (Kg)",
-                      color_discrete_sequence=["#10b981"])
-        fig2.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig2, use_container_width=True)
-
-with tab3:
-    st.header("Tedarik ve Risk Yönetimi")
-    st.info("💡 **Akıllı Analiz:** Bu sekme ERP sistemine (Faz 2) entegre edildiğinde satın alma emirlerini otomatik oluşturacaktır.")
+    # --- YAN MENÜ ---
+    st.sidebar.markdown("## 🌍 Cascade AI Core")
+    st.sidebar.selectbox("📍 Kurum Seçimi", ["ESOGÜ (Pilot Bölge - Aktif)", "ESTÜ (Entegrasyon Aşamasında)"])
+    st.sidebar.markdown("---")
+    st.sidebar.success("🟢 SKS Web Scraping: Aktif")
+    st.sidebar.info("☁️ Open-Meteo API: Senkronize")
+    st.sidebar.info("🧠 AI Motoru: Expert System (Faz 1)")
+    st.sidebar.warning("🔄 ERP ETL İş Akışı: Logo Tiger Beklemede")
+    st.sidebar.markdown("---")
     
-    alert_data = pd.DataFrame({
-        "Hammadde": ["Kırmızı Et", "Domates", "Un", "Mevsim Yeşillikleri"],
-        "Durum": ["Stok Fazlası (Şoklandı)", "Kritik Stok", "Normal", "Hızlı Bozulma Riski"],
-        "Önerilen Aksiyon": ["Cuma günkü alımı iptal et", "Tedarikçiden acil sipariş geç", "Aksiyon Gerekmiyor", "Tatil öncesi alımı %40 azalt"],
-        "Öncelik": ["Yüksek", "Yüksek", "Düşük", "Orta"]
-    })
-    
-    st.dataframe(alert_data.style.apply(
-        lambda x: ['background-color: rgba(239, 68, 68, 0.2)' if v == 'Yüksek' 
-                   else 'background-color: rgba(245, 158, 11, 0.2)' if v == 'Orta' 
-                   else '' for v in x], subset=['Öncelik']
-    ), use_container_width=True)
+    gecerli_tarihler = df['tarih_dt'].tolist()
+    secilen_gun = st.sidebar.date_input("Operasyon Tarihini Seçin:", aktif_tarih, min_value=df['tarih_dt'].min(), max_value=df['tarih_dt'].max())
 
-st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>Cascade AI © 2026 | Siemens Climathon PDR Sürümü</p>", unsafe_allow_html=True)
+    # Bilimsel Dinamik Karbon & Su Ayak İzi (Biyolojik İçeriğe Göre)
+    def cevresel_etki(row):
+        m = row['menu_tipi']
+        kat = row['kategori']
+        if kat in ["Köfte", "Sulu Et"]:
+            return 5.5, 350 # Kırmızı Et Grubu
+        elif kat == "Tavuk":
+            return 2.2, 120 # Beyaz Et Grubu
+        elif "Etli" in m:
+            return 1.8, 110 # Parça Et İçeren Bakliyatlar (Etli Kuru Fasulye, Etli Nohut)
+        else:
+            return 0.8, 40  # %100 Bitkisel Sebze ve Bakliyatlar
+
+    df[['porsiyon_karbon_kg', 'porsiyon_su_litre']] = df.apply(lambda r: pd.Series(cevresel_etki(r)), axis=1)
+
+    # Uzman Sistem Karar Motoru (Beklenen Talep & %3.5 Safety Stock Dahil Optimal Üretim)
+    def karar_motoru(row):
+        baz = float(row['kapasite'])
+        beklenen_oran = beklenen_talep_orani_hesapla(row['hava_olayi'], row['akademik_takvim'], row['kategori'])
+        beklenen_talep = int(round(baz * beklenen_oran))
+        onerilen_uretim = min(int(row['kapasite']), int(round(beklenen_talep * 1.035))) # +%3.5 Güvenlik Stoku
+        return beklenen_talep, onerilen_uretim
+
+    df[['beklenen_model_talebi', 'onerilen_uretim']] = df.apply(lambda r: pd.Series(karar_motoru(r)), axis=1)
+
+    # 🌟 VERİ BİLİMİ ETİĞİ (STRICT TEMPORAL FIREWALL - DATA LEAKAGE KORUMASI) 🌟
+    df['analiz_talebi'] = np.where(df['tarih_dt'] < gercek_bugun, df['gercek_talep'], df['beklenen_model_talebi'])
+
+    # Spesifik Sebze Reçetesi Üretici (Hem Hafta İçi Hem Cuma İçin Ortak Kullanılır)
+    def spesifik_sebze_recetesi(m, zaman_etiketi, ym, kisa_tatil_mi=False):
+        on_hazirlik = "Yıkanmadan ve doğranmadan +4°C nem kontrollü kasalarda korunan" if kisa_tatil_mi else "İşlemden çekilen taze"
+        if "Ispanak" in m:
+            return f"➡️ **Spesifik Sebze Upcycle (Ispanak):** {on_hazirlik} çiğ ıspanak yapraklarını {zaman_etiketi} '{ym}' menüsünün yanında yardımcı 'Ispanaklı Gül Böreği' harcı veya taze salata barı olarak değerlendirin. Kök kısımlarını ESOGÜ Ziraat Fakültesi kompostuna ayırın.\n"
+        elif "Pırasa" in m:
+            return f"➡️ **Spesifik Sebze Upcycle (Pırasa):** {on_hazirlik} pırasaları {zaman_etiketi} '{ym}' menüsünün başlangıç çorbasında (Sebzeli Çorba) veya yardımcı fırın mücver/börek harcında değerlendirin.\n"
+        elif "Kereviz" in m:
+            return f"➡️ **Spesifik Sebze Upcycle (Kereviz):** {on_hazirlik} kerevizleri {zaman_etiketi} '{ym}' menüsünde yoğurtlu 'Kereviz Tarator' (meze) olarak işleyip salata barına ek değer olarak sunun.\n"
+        elif "Brokoli" in m:
+            return f"➡️ **Spesifik Sebze Upcycle (Brokoli):** {on_hazirlik} brokolileri {zaman_etiketi} '{ym}' menüsünde buharda şoklayarak vegan/diyet alternatif veya soğuk zeytinyağlı salata barı olarak değerlendirin.\n"
+        else: # Kapuska / Lahana
+            return f"➡️ **Spesifik Sebze Upcycle (Lahana):** {on_hazirlik} beyaz lahanaları {zaman_etiketi} '{ym}' menüsünün salata barında ince kıyım 'Coleslaw (Lahana Salatası)' veya kışlık turşu olarak değerlendirin.\n"
+
+    # 🌟 ÇAPRAZ MENÜ UYUMLU, 3 KADEMELİ HACCP VE ZAMAN BİLİNÇLİ CASCADE ALGORİTMASI 🌟
+    def cascade_talimati(row):
+        cig = max(0, row['kapasite'] - row['onerilen_uretim'])
+        pismis = max(0, row['onerilen_uretim'] - row['analiz_talebi']) 
+        m = row['menu_tipi']
+        kat = row['kategori']
+        ym = row['yarinki_menu']
+        y_kat = row['yarinki_kategori']
+        gun_farki = int(row['gun_farki'])
+        s_gun = row['sonraki_is_gunu_adi']
+        s_tarih = row['sonraki_tarih']
+        zaman_etiketi = f"{s_gun} günkü"
+        
+        is_gecmis_gun = row['tarih_dt'] < gercek_bugun
+
+        if cig <= 0 and (not is_gecmis_gun or pismis <= 0):
+            if is_gecmis_gun:
+                return "✅ Operasyon Mükemmeliyeti: Beklenen talep tam kapasitede gerçekleşti, sıfır atık sağlandı."
+            else:
+                return f"✅ Tam Kapasite Üretim: Yüksek tercihli menü ({m}) ve mevcut koşullar ({row['hava_olayi']}) doğrultusunda %100 kapasite üretimi önerilmektedir. Kaynakta kesinti (Upstream) gerekmez.\n\n🟧 **DOWNSTREAM (GÜN SONU SOP):** *Olası tezgah fazlası oluşursa akşam vardiyasında yurtlara/barınaklara yönlendirilecektir.*"
+
+        t = ""
+        
+        # --- 1. UPSTREAM: ÜRETİME GİRMEYEN ÇİĞ MALZEME YÖNETİMİ ---
+        if cig > 0:
+            t += f"🟩 **KAYNAKTA KORUMA (ÇİĞ STOK - UPSTREAM):** Beklenen talep düşüşü nedeniyle **{int(cig)} porsiyonluk** ham maddeyi işlemden çekin!\n\n"
+            
+            if gun_farki >= 4:
+                t += f"🛑 **HACCP (UZUN TATİL / DÖNEM SONU PROTOKOLÜ):** Dikkat! Bir sonraki operasyon gününe ({s_tarih} {s_gun}) **{gun_farki} gün** var! Mutfak uzun süreli kapanacağı için **hiçbir taze sebze veya çiğ et +4°C'de bırakılamaz (bakteriyel bozulma riski)!**\n"
+                if kat == "Bakliyat":
+                    ek_et = " Eser miktardaki parça etleri vakumlayıp -18°C'ye kaldırın." if "Etli" in m else ""
+                    t += f"➡️ **Uzun Dönem Aksiyonu ({m}):** Kuru bakliyatları ıslatmayın, kuru erzak deposunda yeni döneme kadar muhafaza edin.{ek_et}\n"
+                elif kat in ["Tavuk", "Köfte", "Sulu Et"]:
+                    t += "➡️ **Uzun Dönem Aksiyonu:** Tüm çiğ et, kıyma ve tavuk stoklarını vakumlayarak **-18°C'de şoklayın**. Eşlikçi taze sebzeleri ise bekletmeden bugün SKS kantinlerine veya yerel aşevlerine/gıda bankalarına bağışlayın.\n"
+                else: 
+                    t += f"➡️ **Uzun Dönem Aksiyonu ({m}):** Taze sebzeler {gun_farki} gün soğuk odada bekleyemez. Çiğ sebzeleri bugün ön haşlama (blanching) yapıp **-18°C'de dondurun** veya soğuk zincirle doğrudan aşevlerine bağışlayın.\n"
+            
+            elif gun_farki in [2, 3]:
+                t += f"⚠️ **HACCP (HAFTA SONU / KISA TATİL PROTOKOLÜ):** Sonraki operasyon gününe ({s_gun}) **{gun_farki} gün** var! Çiğ et, kıyma ve tavuk ürünlerini +4°C'de bekletmeyin; derhal vakumlayıp **-18°C'de şoklayın**. Taze sebzeleri ise soyma/doğrama işlemine almadan, bütün halde **+4°C nem kontrollü** depoda muhafaza edin.\n\n"
+                if kat == "Tavuk":
+                    t += f"➡️ **Çiğ Beyaz Et Aksiyonu ({m}):** Pişirilmeyen tavuk etlerini vakumlayarak -18°C soğuk zincire alın; gelecek haftanın tavuk döngüsünde kullanın.\n"
+                elif kat == "Köfte":
+                    t += f"➡️ **Çiğ Kıyma Aksiyonu ({m}):** Köfte harcını porsiyonlayıp vakumlayarak -18°C'de dondurun; gelecek haftanın köfte gününe saklayın.\n"
+                elif kat == "Bakliyat":
+                    ek_et
