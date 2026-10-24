@@ -6,45 +6,31 @@ import mysql.connector
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. SAYFA AYARLARI VE TEMA (YEŞİL & MAVİ)
+# 1. SAYFA AYARLARI VE TEMA
 # ==========================================
 st.set_page_config(page_title="Cascade AI | DSS", page_icon="🍃", layout="wide")
 
-# CSS ile Kurumsal Tema (Yeşil ve Mavi Tonları)
+# CSS - Dark/Light Modlarla %100 Uyumlu, Sorunsuz Tasarım
 st.markdown("""
     <style>
-    /* Ana arkaplan ve yazı tipleri */
-    .stApp {
-        background-color: #F4F9F9;
-    }
-    /* Üst başlıklar - Kurumsal Mavi */
-    h1, h2, h3 {
-        color: #1E3A8A !important;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    /* Metrik Kartları Tasarımı */
+    /* Metrik Kartları Tasarımı - Arka planı Streamlit'e bırakıp sadece şık yeşil çizgi ekliyoruz */
     div[data-testid="metric-container"] {
-        background-color: #FFFFFF;
-        border-left: 5px solid #10B981; /* Zümrüt Yeşili */
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-left: 5px solid #10B981; 
+        padding-left: 15px;
     }
-    /* Cascade Yönerge Kutusu */
+    /* Cascade Yönerge Kutusu - Saydam arka plan ile karanlık modda bile harika okunur */
     .cascade-box {
-        background-color: #E8F5E9;
+        background-color: rgba(46, 125, 50, 0.15);
         border-left: 5px solid #2E7D32;
         padding: 20px;
         border-radius: 5px;
-        color: #1B5E20;
         font-size: 16px;
         margin-bottom: 20px;
     }
-    /* Sekme (Tab) renkleri */
+    /* Sekme (Tab) yazıları */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-size: 18px;
         font-weight: bold;
-        color: #1E3A8A;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -55,7 +41,6 @@ st.markdown("""
 @st.cache_data(ttl=600)
 def veri_getir():
     try:
-        # Aiven Bulut Veritabanı Bağlantısı (st.secrets ile güvenli)
         db = mysql.connector.connect(
             host=st.secrets["DB_HOST"],
             port=st.secrets["DB_PORT"],
@@ -63,10 +48,9 @@ def veri_getir():
             password=st.secrets["DB_PASS"],
             database="yemekhane_projesi"
         )
-        # Eğer tablon varsa veriyi çeker, yoksa hata vermemesi için sahte (mock) veri oluştururuz
         return pd.read_sql("SELECT * FROM esogu_gercek_veriler", con=db)
     except Exception as e:
-        # Sunum sırasında bağlantı koparsa arayüz çökmesin diye Mock Veri B Planı
+        # Sunum sırasında bağlantı koparsa arayüz çökmesin diye Mock Veri
         tarihler = pd.date_range(start="2026-10-01", periods=14)
         mock_data = pd.DataFrame({
             'Tarih': tarihler,
@@ -82,7 +66,7 @@ df = veri_getir()
 # ==========================================
 # 3. BAŞLIK VE YAN MENÜ (SIDEBAR)
 # ==========================================
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/8064/8064808.png", width=100) # Yaprak/AI İkonu
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/8064/8064808.png", width=100) 
 st.sidebar.title("Cascade AI")
 st.sidebar.markdown("---")
 st.sidebar.markdown("🟢 **Durum:** Sistem Aktif")
@@ -110,14 +94,13 @@ with tab1:
     st.markdown("### 🔄 Cascade (İleri Dönüşüm) Yönergeleri")
     st.markdown("""
     <div class="cascade-box">
-        <b>🚨 HACCP Aksiyon Reçetesi (Tarih: Bugün):</b><br>
+        <b>🚨 HACCP Aksiyon Reçetesi (Tarih: Bugün):</b><br><br>
         1. <b>Talep Düşüşü:</b> Yağış sebebiyle 500 porsiyonluk et üretimi durduruldu.<br>
         2. <b>Çiğ Gıda Koruma:</b> Üretime girmeyen 120 kg kuşbaşı eti -18°C'de şoklayın (Sonraki menü: Cuma - Orman Kebabı).<br>
         3. <b>Pişmiş Gıda Riski:</b> Ispanak sotesinde artış bekleniyor. Kalan porsiyonları yarınki 'Gül Böreği' harcı için +4°C'de ayırın.
     </div>
     """, unsafe_allow_html=True)
 
-    # Chef tablosu
     st.subheader("Haftalık Operasyon Projeksiyonu")
     st.dataframe(df[['Tarih', 'Beklenen_Talep', 'Uretim_Onerisi', 'Hava_Durumu']], use_container_width=True)
 
@@ -133,19 +116,17 @@ with tab2:
     col_chart1, col_chart2 = st.columns(2)
 
     with col_chart1:
-        # Plotly Çizgi Grafiği - Estetik Mavi/Yeşil
         fig1 = px.line(df, x='Tarih', y=['Beklenen_Talep', 'Uretim_Onerisi'], 
                        labels={'value': 'Porsiyon', 'variable': 'Metrik'},
-                       color_discrete_sequence=["#1E3A8A", "#10B981"], # Mavi ve Yeşil
+                       color_discrete_sequence=["#3b82f6", "#10b981"],
                        title="Talep ve Optimum Üretim Karşılaştırması")
         fig1.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig1, use_container_width=True)
 
     with col_chart2:
-        # Plotly Bar Grafiği
         fig2 = px.bar(df, x='Tarih', y='Kurtarilan_Gida_Kg', 
                       title="Günlük Kurtarılan Gıda Miktarı (Kg)",
-                      color_discrete_sequence=["#10B981"])
+                      color_discrete_sequence=["#10b981"])
         fig2.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -160,12 +141,12 @@ with tab3:
         "Öncelik": ["Yüksek", "Yüksek", "Düşük", "Orta"]
     })
     
-    # Renkli tablo gösterimi
+    # Koyu modda renklerin göz yormaması için rgba(saydam) yapıldı
     st.dataframe(alert_data.style.apply(
-        lambda x: ['background-color: #ffcccc' if v == 'Yüksek' 
-                   else 'background-color: #fff2cc' if v == 'Orta' 
+        lambda x: ['background-color: rgba(239, 68, 68, 0.2)' if v == 'Yüksek' 
+                   else 'background-color: rgba(245, 158, 11, 0.2)' if v == 'Orta' 
                    else '' for v in x], subset=['Öncelik']
     ), use_container_width=True)
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #7f8c8d;'>Cascade AI © 2026 | Siemens Climathon PDR Sürümü</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Cascade AI © 2026 | Siemens Climathon PDR Sürümü</p>", unsafe_allow_html=True)
