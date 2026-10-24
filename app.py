@@ -7,18 +7,23 @@ from datetime import datetime, date, timedelta
 import numpy as np
 
 # --- 1. ARAYÜZ YAPILANDIRMASI VE SABİTLER ---
-st.set_page_config(page_title="Cascade AI | Enterprise DSS", layout="wide", page_icon="🌱")
+st.set_page_config(page_title="Cascade AI | Enterprise DSS", layout="wide", page_icon="🌍")
 
-# SADECE YEŞİL/MAVİ TEMA İÇİN ZARİF CSS (Yazı renklerini bozmaz)
+# SADECE YEŞİL/MAVİ TEMA İÇİN ZARİF CSS (Sürdürülebilirlik Renkleri)
 st.markdown("""
     <style>
+    /* Metrik kutularına Buz Mavisi arka plan ve Zümrüt Yeşili vurgu */
     div[data-testid="metric-container"] {
-        border-left: 5px solid #10B981; /* Zümrüt Yeşili Vurgu */
-        padding-left: 15px;
+        border-left: 5px solid #10B981; 
+        background-color: #F0F9FF; 
+        padding: 10px 15px;
+        border-radius: 8px;
     }
+    /* Sekme yazıları Kurumsal Gece Mavisi */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-size: 18px;
         font-weight: bold;
+        color: #1E3A8A;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -123,7 +128,7 @@ if not df.empty:
         aktif_tarih += timedelta(days=1)
 
     # --- YAN MENÜ ---
-    st.sidebar.markdown("## 🌍 Cascade AI Core")
+    st.sidebar.markdown("## 🌍 Cascade AI Core ♻️")
     st.sidebar.selectbox("📍 Kurum Seçimi", ["ESOGÜ (Pilot Bölge - Aktif)", "ESTÜ (Entegrasyon Aşamasında)"])
     st.sidebar.markdown("---")
     st.sidebar.success("🟢 SKS Web Scraping: Aktif")
@@ -133,7 +138,7 @@ if not df.empty:
     st.sidebar.markdown("---")
     
     gecerli_tarihler = df['tarih_dt'].tolist()
-    secilen_gun = st.sidebar.date_input("Operasyon Tarihini Seçin:", aktif_tarih, min_value=df['tarih_dt'].min(), max_value=df['tarih_dt'].max())
+    secilen_gun = st.sidebar.date_input("📅 Operasyon Tarihini Seçin:", aktif_tarih, min_value=df['tarih_dt'].min(), max_value=df['tarih_dt'].max())
 
     # Bilimsel Dinamik Karbon & Su Ayak İzi (Biyolojik İçeriğe Göre)
     def cevresel_etki(row):
@@ -166,15 +171,15 @@ if not df.empty:
     def spesifik_sebze_recetesi(m, zaman_etiketi, ym, kisa_tatil_mi=False):
         on_hazirlik = "Yıkanmadan ve doğranmadan +4°C nem kontrollü kasalarda korunan" if kisa_tatil_mi else "İşlemden çekilen taze"
         if "Ispanak" in m:
-            return f"➡️ **Spesifik Sebze Upcycle (Ispanak):** {on_hazirlik} çiğ ıspanak yapraklarını {zaman_etiketi} '{ym}' menüsünün yanında yardımcı 'Ispanaklı Gül Böreği' harcı veya taze salata barı olarak değerlendirin. Kök kısımlarını ESOGÜ Ziraat Fakültesi kompostuna ayırın.\n"
+            return f"➡️ **Spesifik Sebze Upcycle (Ispanak) ♻️:** {on_hazirlik} çiğ ıspanak yapraklarını {zaman_etiketi} '{ym}' menüsünün yanında yardımcı 'Ispanaklı Gül Böreği' harcı veya taze salata barı olarak değerlendirin. Kök kısımlarını ESOGÜ Ziraat Fakültesi kompostuna ayırın.\n"
         elif "Pırasa" in m:
-            return f"➡️ **Spesifik Sebze Upcycle (Pırasa):** {on_hazirlik} pırasaları {zaman_etiketi} '{ym}' menüsünün başlangıç çorbasında (Sebzeli Çorba) veya yardımcı fırın mücver/börek harcında değerlendirin.\n"
+            return f"➡️ **Spesifik Sebze Upcycle (Pırasa) ♻️:** {on_hazirlik} pırasaları {zaman_etiketi} '{ym}' menüsünün başlangıç çorbasında (Sebzeli Çorba) veya yardımcı fırın mücver/börek harcında değerlendirin.\n"
         elif "Kereviz" in m:
-            return f"➡️ **Spesifik Sebze Upcycle (Kereviz):** {on_hazirlik} kerevizleri {zaman_etiketi} '{ym}' menüsünde yoğurtlu 'Kereviz Tarator' (meze) olarak işleyip salata barına ek değer olarak sunun.\n"
+            return f"➡️ **Spesifik Sebze Upcycle (Kereviz) ♻️:** {on_hazirlik} kerevizleri {zaman_etiketi} '{ym}' menüsünde yoğurtlu 'Kereviz Tarator' (meze) olarak işleyip salata barına ek değer olarak sunun.\n"
         elif "Brokoli" in m:
-            return f"➡️ **Spesifik Sebze Upcycle (Brokoli):** {on_hazirlik} brokolileri {zaman_etiketi} '{ym}' menüsünde buharda şoklayarak vegan/diyet alternatif veya soğuk zeytinyağlı salata barı olarak değerlendirin.\n"
+            return f"➡️ **Spesifik Sebze Upcycle (Brokoli) ♻️:** {on_hazirlik} brokolileri {zaman_etiketi} '{ym}' menüsünde buharda şoklayarak vegan/diyet alternatif veya soğuk zeytinyağlı salata barı olarak değerlendirin.\n"
         else: # Kapuska / Lahana
-            return f"➡️ **Spesifik Sebze Upcycle (Lahana):** {on_hazirlik} beyaz lahanaları {zaman_etiketi} '{ym}' menüsünün salata barında ince kıyım 'Coleslaw (Lahana Salatası)' veya kışlık turşu olarak değerlendirin.\n"
+            return f"➡️ **Spesifik Sebze Upcycle (Lahana) ♻️:** {on_hazirlik} beyaz lahanaları {zaman_etiketi} '{ym}' menüsünün salata barında ince kıyım 'Coleslaw (Lahana Salatası)' veya kışlık turşu olarak değerlendirin.\n"
 
     # 🌟 ÇAPRAZ MENÜ UYUMLU, 3 KADEMELİ HACCP VE ZAMAN BİLİNÇLİ CASCADE ALGORİTMASI 🌟
     def cascade_talimati(row):
@@ -193,59 +198,59 @@ if not df.empty:
 
         if cig <= 0 and (not is_gecmis_gun or pismis <= 0):
             if is_gecmis_gun:
-                return "✅ Operasyon Mükemmeliyeti: Beklenen talep tam kapasitede gerçekleşti, sıfır atık sağlandı."
+                return "✅ Operasyon Mükemmeliyeti: Beklenen talep tam kapasitede gerçekleşti, sıfır atık sağlandı. 🍃"
             else:
-                return f"✅ Tam Kapasite Üretim: Yüksek tercihli menü ({m}) ve mevcut koşullar ({row['hava_olayi']}) doğrultusunda %100 kapasite üretimi önerilmektedir. Kaynakta kesinti (Upstream) gerekmez.\n\n🟧 **DOWNSTREAM (GÜN SONU SOP):** *Olası tezgah fazlası oluşursa akşam vardiyasında yurtlara/barınaklara yönlendirilecektir.*"
+                return f"✅ Tam Kapasite Üretim: Yüksek tercihli menü ({m}) ve mevcut koşullar ({row['hava_olayi']}) doğrultusunda %100 kapasite üretimi önerilmektedir. Kaynakta kesinti (Upstream) gerekmez.\n\n🟧 **DOWNSTREAM (GÜN SONU SOP) ♻️:** *Olası tezgah fazlası oluşursa akşam vardiyasında yurtlara/barınaklara yönlendirilecektir.*"
 
         t = ""
         
         # --- 1. UPSTREAM: ÜRETİME GİRMEYEN ÇİĞ MALZEME YÖNETİMİ ---
         if cig > 0:
-            t += f"🟩 **KAYNAKTA KORUMA (ÇİĞ STOK - UPSTREAM):** Beklenen talep düşüşü nedeniyle **{int(cig)} porsiyonluk** ham maddeyi işlemden çekin!\n\n"
+            t += f"🟩 **KAYNAKTA KORUMA (ÇİĞ STOK - UPSTREAM) 🍃:** Beklenen talep düşüşü nedeniyle **{int(cig)} porsiyonluk** ham maddeyi işlemden çekin!\n\n"
             
             if gun_farki >= 4:
                 t += f"🛑 **HACCP (UZUN TATİL / DÖNEM SONU PROTOKOLÜ):** Dikkat! Bir sonraki operasyon gününe ({s_tarih} {s_gun}) **{gun_farki} gün** var! Mutfak uzun süreli kapanacağı için **hiçbir taze sebze veya çiğ et +4°C'de bırakılamaz (bakteriyel bozulma riski)!**\n"
                 if kat == "Bakliyat":
                     ek_et = " Eser miktardaki parça etleri vakumlayıp -18°C'ye kaldırın." if "Etli" in m else ""
-                    t += f"➡️ **Uzun Dönem Aksiyonu ({m}):** Kuru bakliyatları ıslatmayın, kuru erzak deposunda yeni döneme kadar muhafaza edin.{ek_et}\n"
+                    t += f"➡️ **Uzun Dönem Aksiyonu ({m}) ♻️:** Kuru bakliyatları ıslatmayın, kuru erzak deposunda yeni döneme kadar muhafaza edin.{ek_et}\n"
                 elif kat in ["Tavuk", "Köfte", "Sulu Et"]:
-                    t += "➡️ **Uzun Dönem Aksiyonu:** Tüm çiğ et, kıyma ve tavuk stoklarını vakumlayarak **-18°C'de şoklayın**. Eşlikçi taze sebzeleri ise bekletmeden bugün SKS kantinlerine veya yerel aşevlerine/gıda bankalarına bağışlayın.\n"
+                    t += "➡️ **Uzun Dönem Aksiyonu ♻️:** Tüm çiğ et, kıyma ve tavuk stoklarını vakumlayarak **-18°C'de şoklayın**. Eşlikçi taze sebzeleri ise bekletmeden bugün SKS kantinlerine veya yerel aşevlerine/gıda bankalarına bağışlayın.\n"
                 else: 
-                    t += f"➡️ **Uzun Dönem Aksiyonu ({m}):** Taze sebzeler {gun_farki} gün soğuk odada bekleyemez. Çiğ sebzeleri bugün ön haşlama (blanching) yapıp **-18°C'de dondurun** veya soğuk zincirle doğrudan aşevlerine bağışlayın.\n"
+                    t += f"➡️ **Uzun Dönem Aksiyonu ({m}) ♻️:** Taze sebzeler {gun_farki} gün soğuk odada bekleyemez. Çiğ sebzeleri bugün ön haşlama (blanching) yapıp **-18°C'de dondurun** veya soğuk zincirle doğrudan aşevlerine bağışlayın.\n"
             
             elif gun_farki in [2, 3]:
                 t += f"⚠️ **HACCP (HAFTA SONU / KISA TATİL PROTOKOLÜ):** Sonraki operasyon gününe ({s_gun}) **{gun_farki} gün** var! Çiğ et, kıyma ve tavuk ürünlerini +4°C'de bekletmeyin; derhal vakumlayıp **-18°C'de şoklayın**. Taze sebzeleri ise soyma/doğrama işlemine almadan, bütün halde **+4°C nem kontrollü** depoda muhafaza edin.\n\n"
                 if kat == "Tavuk":
-                    t += f"➡️ **Çiğ Beyaz Et Aksiyonu ({m}):** Pişirilmeyen tavuk etlerini vakumlayarak -18°C soğuk zincire alın; gelecek haftanın tavuk döngüsünde kullanın.\n"
+                    t += f"➡️ **Çiğ Beyaz Et Aksiyonu ({m}) ♻️:** Pişirilmeyen tavuk etlerini vakumlayarak -18°C soğuk zincire alın; gelecek haftanın tavuk döngüsünde kullanın.\n"
                 elif kat == "Köfte":
-                    t += f"➡️ **Çiğ Kıyma Aksiyonu ({m}):** Köfte harcını porsiyonlayıp vakumlayarak -18°C'de dondurun; gelecek haftanın köfte gününe saklayın.\n"
+                    t += f"➡️ **Çiğ Kıyma Aksiyonu ({m}) ♻️:** Köfte harcını porsiyonlayıp vakumlayarak -18°C'de dondurun; gelecek haftanın köfte gününe saklayın.\n"
                 elif kat == "Bakliyat":
                     ek_et = " Parça etleri vakumlayıp -18°C'de şoklayın." if "Etli" in m else ""
-                    t += f"➡️ **Kuru Bakliyat Aksiyonu ({m}):** Talep fazlası bakliyatları ıslatmayın, kuru depoda tutun.{ek_et}\n"
+                    t += f"➡️ **Kuru Bakliyat Aksiyonu ({m}) ♻️:** Talep fazlası bakliyatları ıslatmayın, kuru depoda tutun.{ek_et}\n"
                 elif kat == "Sulu Et":
                     if "Karnıyarık" in m:
-                        t += f"➡️ **Çiğ Harç & Sebze Aksiyonu (Karnıyarık):** İç harç kıymasını vakumlayıp -18°C'de şoklayın. Patlıcanları soymadan bütün halde +4°C nem kontrollü odada tutun; {zaman_etiketi} '{ym}' menüsünün yanında köz patlıcan salatası/meze olarak işleyin.\n"
+                        t += f"➡️ **Çiğ Harç & Sebze Aksiyonu (Karnıyarık) ♻️:** İç harç kıymasını vakumlayıp -18°C'de şoklayın. Patlıcanları soymadan bütün halde +4°C nem kontrollü odada tutun; {zaman_etiketi} '{ym}' menüsünün yanında köz patlıcan salatası/meze olarak işleyin.\n"
                     else:
-                        t += f"➡️ **Çiğ Parça Et & Sebze Aksiyonu ({m}):** Kuşbaşı etleri vakumlayıp -18°C'de şoklayın. Sebzeleri (patates/havuç) kesinlikle doğramayın; bütün halde +4°C nem kontrollü depoda tutarak {zaman_etiketi} '{ym}' menüsünün yan hazırlığında değerlendirin.\n"
+                        t += f"➡️ **Çiğ Parça Et & Sebze Aksiyonu ({m}) ♻️:** Kuşbaşı etleri vakumlayıp -18°C'de şoklayın. Sebzeleri (patates/havuç) kesinlikle doğramayın; bütün halde +4°C nem kontrollü depoda tutarak {zaman_etiketi} '{ym}' menüsünün yan hazırlığında değerlendirin.\n"
                 elif kat == "Sebze":
                     t += spesifik_sebze_recetesi(m, zaman_etiketi, ym, kisa_tatil_mi=True)
             
             else:
                 if kat == "Tavuk":
-                    t += f"➡️ **Çiğ Beyaz Et Aksiyonu:** İşlemden çekilen çiğ tavukları vakumlayıp -18°C'de bir sonraki tavuk döngüsüne şoklayın ({zaman_etiketi} ana yemek '{ym}' olarak planlanmıştır). Alternatif olarak haşlayıp {zaman_etiketi} menünün 'Tavuk Suyu Çorbası' bazında veya SKS kantin sandviçlerinde değerlendirin.\n"
+                    t += f"➡️ **Çiğ Beyaz Et Aksiyonu ♻️:** İşlemden çekilen çiğ tavukları vakumlayıp -18°C'de bir sonraki tavuk döngüsüne şoklayın ({zaman_etiketi} ana yemek '{ym}' olarak planlanmıştır). Alternatif olarak haşlayıp {zaman_etiketi} menünün 'Tavuk Suyu Çorbası' bazında veya SKS kantin sandviçlerinde değerlendirin.\n"
                 elif kat == "Köfte":
-                    t += f"➡️ **Çiğ Kıyma Aksiyonu:** Hazırlanmış çiğ köfte harcını porsiyonlayarak vakumlayın ve -18°C'de bir sonraki köfte döngüsüne kadar dondurun ({zaman_etiketi} ana yemek '{ym}' olarak planlanmıştır).\n"
+                    t += f"➡️ **Çiğ Kıyma Aksiyonu ♻️:** Hazırlanmış çiğ köfte harcını porsiyonlayarak vakumlayın ve -18°C'de bir sonraki köfte döngüsüne kadar dondurun ({zaman_etiketi} ana yemek '{ym}' olarak planlanmıştır).\n"
                 elif kat == "Bakliyat":
                     if "Etli" in m:
-                        t += f"➡️ **Kuru Bakliyat & Et Aksiyonu ({m}):** Talep fazlası kuru bakliyatları ıslatma işlemine almayın, kuru erzak deposunda muhafaza edin. Ayrılan kuşbaşı etleri vakumlayıp -18°C'ye kaldırın.\n"
+                        t += f"➡️ **Kuru Bakliyat & Et Aksiyonu ({m}) ♻️:** Talep fazlası kuru bakliyatları ıslatma işlemine almayın, kuru erzak deposunda muhafaza edin. Ayrılan kuşbaşı etleri vakumlayıp -18°C'ye kaldırın.\n"
                     else:
-                        t += f"➡️ **Kuru Bakliyat Aksiyonu ({m}):** Talep fazlası bakliyatları ıslatma/haşlama işlemine almayın, doğrudan kuru erzak deposunda tutun. Doğranmamış soğan/havuç bazını {zaman_etiketi} '{ym}' menüsüne aktarın.\n"
+                        t += f"➡️ **Kuru Bakliyat Aksiyonu ({m}) ♻️:** Talep fazlası bakliyatları ıslatma/haşlama işlemine almayın, doğrudan kuru erzak deposunda tutun. Doğranmamış soğan/havuç bazını {zaman_etiketi} '{ym}' menüsüne aktarın.\n"
                 elif kat == "Sulu Et":
                     if "Karnıyarık" in m:
-                        t += f"➡️ **Çiğ Harç & Sebze Aksiyonu:** Patlıcanları soymayın (+4°C'de tutun, {zaman_etiketi} '{ym}' yanında köz patlıcan salatası/meze yapın). İç harç için ayrılan çiğ kıymayı vakumlayıp -18°C'de şoklayın veya yardımcı makarna sosunda (Bolonez) değerlendirin.\n"
+                        t += f"➡️ **Çiğ Harç & Sebze Aksiyonu ♻️:** Patlıcanları soymayın (+4°C'de tutun, {zaman_etiketi} '{ym}' yanında köz patlıcan salatası/meze yapın). İç harç için ayrılan çiğ kıymayı vakumlayıp -18°C'de şoklayın veya yardımcı makarna sosunda (Bolonez) değerlendirin.\n"
                     else:
                         uyum_notu = f"{zaman_etiketi} '{ym}' menüsünün yanına fırın/püre garnitür" if y_kat in ["Tavuk", "Köfte"] else f"{zaman_etiketi} '{ym}' menüsü öncesine sebze çorbası bazı"
-                        t += f"➡️ **Çiğ Parça Et & Sebze Aksiyonu:** Kuşbaşı etleri pişirmeden vakumlayıp -18°C'de bir sonraki et döngüsüne saklayın. Doğranmış çiğ sebzeleri (patates, havuç) {uyum_notu} olarak aktarın.\n"
+                        t += f"➡️ **Çiğ Parça Et & Sebze Aksiyonu ♻️:** Kuşbaşı etleri pişirmeden vakumlayıp -18°C'de bir sonraki et döngüsüne saklayın. Doğranmış çiğ sebzeleri (patates, havuç) {uyum_notu} olarak aktarın.\n"
                 elif kat == "Sebze":
                     t += spesifik_sebze_recetesi(m, zaman_etiketi, ym, kisa_tatil_mi=False)
             t += "\n"
@@ -253,25 +258,25 @@ if not df.empty:
         # --- 2. DOWNSTREAM: TEZGAHTA KALAN PİŞMİŞ YEMEK YÖNETİMİ ---
         if is_gecmis_gun:
             if pismis > 0:
-                t += f"🟧 **TEZGAHTAN ARTAN (PİŞMİŞ - DOWNSTREAM):** Gün sonunda kazanlarda **{int(pismis)} porsiyon** pişmiş yemek kaldı! Uygulanan prosedür:\n"
+                t += f"🟧 **TEZGAHTAN ARTAN (PİŞMİŞ - DOWNSTREAM) ♻️:** Gün sonunda kazanlarda **{int(pismis)} porsiyon** pişmiş yemek kaldı! Uygulanan prosedür:\n"
                 if kat == "Sebze":
-                    t += "➡️ **Biyolojik Döngü (%100 Bitkisel Kompost):** Pişmiş sebze yemeklerinin tekrar ısıtılması (HACCP) uygun değildir. Hayvansal içerik barındırmadığı için süzülerek katı kısımları ESOGÜ Ziraat Fakültesi kompost alanına gönderildi.\n"
+                    t += "➡️ **Biyolojik Döngü (%100 Bitkisel Kompost) 🌱:** Pişmiş sebze yemeklerinin tekrar ısıtılması (HACCP) uygun değildir. Hayvansal içerik barındırmadığı için süzülerek katı kısımları ESOGÜ Ziraat Fakültesi kompost alanına gönderildi.\n"
                 elif kat in ["Tavuk", "Köfte"]:
-                    t += "➡️ **İleri Dönüşüm & Barınak:** Hijyenik tezgah fazlası porsiyonlar SKS kafeteryasında sandviç/ekmek arası olarak değerlendirildi; kemik ve tabak atıkları kampüs hayvan besleme ünitelerine yönlendirildi.\n"
+                    t += "➡️ **İleri Dönüşüm & Barınak 🐶:** Hijyenik tezgah fazlası porsiyonlar SKS kafeteryasında sandviç/ekmek arası olarak değerlendirildi; kemik ve tabak atıkları kampüs hayvan besleme ünitelerine yönlendirildi.\n"
                 else:
                     ek_not = "(Ramazan İftar Paketi)" if row['akademik_takvim'] == "Ramazan Ayı" else "(Too Good To Go Modeli)"
-                    t += f"➡️ **Sosyal Satış {ek_not}:** Kazanlarda kalan sıcak ve güvenli yemekler, 18:00 - 19:30 arası öğrenci yurtlarına '%50 İndirimli Kurtarılmış Öğün' bildirimiyle satıldı ve aşevlerine bağışlandı.\n"
+                    t += f"➡️ **Sosyal Satış {ek_not} 🤝:** Kazanlarda kalan sıcak ve güvenli yemekler, 18:00 - 19:30 arası öğrenci yurtlarına '%50 İndirimli Kurtarılmış Öğün' bildirimiyle satıldı ve aşevlerine bağışlandı.\n"
             else:
-                t += "🟧 **DOWNSTREAM (PİŞMİŞ):** Tezgahta hiç pişmiş yemek artmadı (0 Pişmiş İsraf).\n"
+                t += "🟧 **DOWNSTREAM (PİŞMİŞ):** Tezgahta hiç pişmiş yemek artmadı (0 Pişmiş İsraf). 🍃\n"
         else:
             t += "🟧 **DOWNSTREAM (GÜN SONU ACİL DURUM PROSEDÜRÜ - SOP):** *Bu operasyon günü henüz tamamlanmadığı için tezgahta kalacak pişmiş yemek miktarı gün sonunda netleşecektir. Olası sapmalara karşı hazır tutulacak B Planı:*\n"
             if kat == "Sebze":
-                t += "➡️ **SOP (Bitkisel Sebze Grubu):** Tezgahta pişmiş sebze artarsa süzülerek doğrudan ESOGÜ Ziraat Fakültesi kompost ünitesine ayrılacaktır.\n"
+                t += "➡️ **SOP (Bitkisel Sebze Grubu) 🌱:** Tezgahta pişmiş sebze artarsa süzülerek doğrudan ESOGÜ Ziraat Fakültesi kompost ünitesine ayrılacaktır.\n"
             elif kat in ["Tavuk", "Köfte"]:
-                t += "➡️ **SOP (Protein Grubu):** Tezgahta pişmiş ürün kalırsa akşam vardiyasında kantin/yurt satışına veya kampüs hayvan barınaklarına yönlendirilecektir.\n"
+                t += "➡️ **SOP (Protein Grubu) 🐶:** Tezgahta pişmiş ürün kalırsa akşam vardiyasında kantin/yurt satışına veya kampüs hayvan barınaklarına yönlendirilecektir.\n"
             else:
                 ek_not = "İftar saatinde" if row['akademik_takvim'] == "Ramazan Ayı" else "18:00 sonrasında"
-                t += f"➡️ **SOP (Sulu Yemek & Bakliyat):** Kazanlarda yemek artarsa {ek_not} yurtlara '%50 İndirimli Gece Öğünü' bildirimi atılacak veya gıda bankasına soğuk zincirle teslim edilecektir.\n"
+                t += f"➡️ **SOP (Sulu Yemek & Bakliyat) 🤝:** Kazanlarda yemek artarsa {ek_not} yurtlara '%50 İndirimli Gece Öğünü' bildirimi atılacak veya gıda bankasına soğuk zincirle teslim edilecektir.\n"
                 
         return t
 
@@ -291,10 +296,10 @@ if not df.empty:
     df['cascade_aksiyonu'] = df.apply(cascade_talimati, axis=1)
 
     # --- 5. ANA EKRAN VE SEKMELER ---
-    st.title("🌱 Cascade AI | Kurumsal Kaynak & İklim Paneli")
+    st.title("🌍 Cascade AI | Kurumsal Kaynak & İklim Paneli ♻️")
     
-    # SEKME BAŞLIKLARI GÜNCELLENDİ
-    tab1, tab2, tab3 = st.tabs(["🧑‍🍳 Şef Operasyon Paneli", "📊 SKS Yönetim Raporu", "🛒 Satın Alma Raporu"])
+    # SEKME BAŞLIKLARI (Emojiler eklendi)
+    tab1, tab2, tab3 = st.tabs(["🧑‍🍳 Şef Operasyon Paneli 🍃", "📊 SKS Yönetim Raporu 🌍", "🛒 Satın Alma Raporu ♻️"])
 
     df_gecmis = df[df['tarih_dt'] <= secilen_gun].copy()
     df_gelecek = df[df['tarih_dt'] > secilen_gun].copy()
@@ -330,15 +335,15 @@ if not df.empty:
             if gv['karsilanamayan_talep'] > 0 and secilen_gun < gercek_bugun:
                 st.error(f"⚠️ STOK AŞIMI RAPORU: Bu tarihte beklenmeyen talep sıçraması nedeniyle gerçek talep ({gv['gercek_talep']}) AI hedefini ({gv['onerilen_uretim']}) aşmış, Hizmet Seviyesi %{gv['hizmet_seviyesi']:.1f} olarak gerçekleşmiştir.")
             
-            st.markdown(f"### 👨‍🍳 Kademeli Döngüsel Ekonomi (Cascade) Yönergesi *(Sonraki İş Günü: {gv['sonraki_tarih']} {gv['sonraki_is_gunu_adi']} - {gv['yarinki_menu']})*")
+            st.markdown(f"### 👨‍🍳 Kademeli Döngüsel Ekonomi (Cascade) Yönergesi ♻️ *(Sonraki İş Günü: {gv['sonraki_tarih']} {gv['sonraki_is_gunu_adi']} - {gv['yarinki_menu']})*")
             st.info(gv['cascade_aksiyonu'])
 
     with tab2:
         if secilen_gun < gercek_bugun:
-            st.subheader(f"Pilot Kurum Doğrulanmış Sürdürülebilirlik Raporu (Eylül 2025 - {secilen_gun})")
+            st.subheader(f"Pilot Kurum Doğrulanmış Sürdürülebilirlik Raporu (Eylül 2025 - {secilen_gun}) 🌍")
             st.caption("✅ *Bu rapor tamamlanmış gerçek operasyon günlerinin doğrulanmış verilerini içerir.*")
         else:
-            st.subheader(f"Kümülatif Sürdürülebilirlik Raporu & Projeksiyonu (Eylül 2025 - {secilen_gun})")
+            st.subheader(f"Kümülatif Sürdürülebilirlik Raporu & Projeksiyonu (Eylül 2025 - {secilen_gun}) 🌍")
             st.caption(f"ℹ️ *Veri Bütünlüğü Koruması (Zero Data Leakage): {gercek_bugun} öncesi doğrulanmış gerçek turnike verilerini, {gercek_bugun} - {secilen_gun} arası ise modelin beklenen talep projeksiyonlarını kapsar.*")
             
         if not df_gecmis.empty:
@@ -364,13 +369,13 @@ if not df.empty:
             st.info("Seçilen tarihten önceye ait operasyon verisi bulunmuyor.")
 
     with tab3:
-        st.subheader(f"Gelecek Akademik Dönem (Upstream) Öngörüleri ({secilen_gun} Sonrası)")
+        st.subheader(f"Gelecek Akademik Dönem (Upstream) Öngörüleri ({secilen_gun} Sonrası) 🍃")
         if not df_gelecek.empty:
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("🔮 Planlanan Çiğ Kurtarma", f"{df_gelecek['kurtarilan_porsiyon'].sum():,} Pors.")
             col2.metric("🔮 Öngörülen Tasarruf", f"₺ {df_gelecek['tasarruf_tl'].sum():,.0f}")
-            col3.metric("🔮 Hedeflenen CO2e Azaltımı", f"{df_gelecek['onlenen_karbon_kg'].sum():,.0f} kg")
-            col4.metric("🔮 Korunacak Su", f"{df_gelecek['korunan_su_litre'].sum():,.0f} L")
+            col3.metric("🌬️ Hedeflenen CO2e Azaltımı", f"{df_gelecek['onlenen_karbon_kg'].sum():,.0f} kg")
+            col4.metric("💧 Korunacak Su", f"{df_gelecek['korunan_su_litre'].sum():,.0f} L")
 
             st.divider()
             st.markdown("### ⚠️ Logo Tiger ERP / Satın Alma Departmanı Erken Uyarı Listesi")
